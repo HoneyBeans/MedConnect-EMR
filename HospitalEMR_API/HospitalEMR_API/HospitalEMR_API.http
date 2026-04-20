@@ -1,0 +1,15 @@
+@HostAddress = http://127.0.0.1:5254
+
+### 1. Test GET (Read Data)
+GET {{HostAddress}}/api/Patient/031012-12-0221
+Accept: application/json
+
+### 2. Test POST (Add New Record)
+POST {{HostAddress}}/api/Patient/AddHistory
+Content-Type: application/json
+
+{
+  "IC": "031012-12-0221",
+  "Diagnosis": "Asthma Follow-up",
+  "DoctorNotes": "Patient reports breathing has improved. Continuing current inhaler dosage."
+}

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise EMR System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Hide scrollbar for clean UI but keep functionality */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
+
+    <div class="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-2xl font-black tracking-wider text-blue-400">MedConnect<span class="text-white">+</span></h1>
+            <p class="text-xs text-slate-400 mt-1">Enterprise Health Engine</p>
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Database</div>
+            <button onclick="switchTab('search')" id="nav-search" class="w-full text-left px-4 py-3 rounded-md bg-blue-600 font-semibold shadow transition-all">🔍 Patient Search</button>
+            <button onclick="switchTab('register')" id="nav-register" class="w-full text-left px-4 py-3 rounded-md hover:bg-slate-800 text-slate-300 font-semibold transition-all">➕ Register Patient</button>
+            
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-6">Clinical Pipeline</div>
+            <button onclick="switchTab('nurse')" id="nav-nurse" class="w-full text-left px-4 py-3 rounded-md hover:bg-slate-800 text-emerald-400 font-semibold transition-all">📋 1. Nurse Triage</button>
+            <button onclick="switchTab('doctor')" id="nav-doctor" class="w-full text-left px-4 py-3 rounded-md hover:bg-slate-800 text-blue-300 font-semibold transition-all">🩺 2. Doctor Queue</button>
+            <button onclick="switchTab('pharmacy')" id="nav-pharmacy" class="w-full text-left px-4 py-3 rounded-md hover:bg-slate-800 text-purple-400 font-semibold transition-all">💊 3. Pharmacy</button>
+        </nav>
+        <div class="p-4 border-t border-slate-700 text-sm text-slate-400">
+            Network Status: <span class="text-emerald-400 font-bold">● Secure</span>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-100">
+        
+        <header class="bg-white h-16 shadow-sm border-b flex items-center px-8 justify-between z-0 sticky top-0">
+            <h2 class="text-xl font-bold text-slate-700" id="headerTitle">Patient Database</h2>
+            <div class="text-sm font-medium text-slate-500" id="activeRole">Role: Administrator</div>
+        </header>
+
+        <main id="view-search" class="p-8 max-w-6xl mx-auto w-full">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
+                <div class="flex gap-4">
+                    <input type="text" id="icInput" placeholder="Enter Patient IC (e.g., 031012-12-0221)" class="flex-1 bg-slate-50 border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-lg">
+                    <button onclick="searchPatient()" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-md transition-all">Search</button>
+                </div>
+            </div>
+
+            <div id="patientResult" class="hidden">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6 flex justify-between items-start border-l-4 border-l-blue-500">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900" id="uiFullName">Name</h2>
+                        <p class="text-slate-500 mt-1 font-medium">IC: <span id="uiIC"></span> • Age: <span id="uiAge"></span></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editPatient()" class="bg-slate-100 border border-slate-300 text-slate-700 px-4 py-2 rounded-md hover:bg-slate-200 font-semibold text-sm">Edit Vitals</button>
+                        <button onclick="deletePatient()" class="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-md hover:bg-red-100 font-semibold text-sm">Delete Profile</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Current Vitals</h3>
+                        <p class="text-lg"><strong>Height:</strong> <span id="uiHeight"></span> cm</p>
+                        <p class="text-lg"><strong>Weight:</strong> <span id="uiWeight"></span> kg</p>
+                    </div>
+                    <div class="col-span-2 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Known Allergies</h3>
+                            <button onclick="addAllergy()" class="text-orange-600 bg-orange-50 hover:bg-orange-100 px-3 py-1 rounded text-sm font-bold border border-orange-200">+ Add Allergy</button>
+                        </div>
+                        <ul id="uiAllergies" class="space-y-2"></ul>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-xl font-bold text-slate-800 mb-6">Complete Medical History</h3>
+                    <ul id="uiHistory" class="space-y-4"></ul>
+                </div>
+            </div>
+        </main>
+
+        <main id="view-register" class="hidden p-8 max-w-3xl mx-auto w-full">
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-blue-500">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">Register New Patient</h2>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-bold text-slate-600 mb-1">Full Legal Name</label><input type="text" id="regName" class="w-full border p-3 rounded-md"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">IC Number</label><input type="text" id="regIC" class="w-full border p-3 rounded-md"></div>
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">Date of Birth</label><input type="date" id="regDOB" class="w-full border p-3 rounded-md"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">Height (cm)</label><input type="number" id="regHeight" class="w-full border p-3 rounded-md"></div>
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">Weight (kg)</label><input type="number" id="regWeight" class="w-full border p-3 rounded-md"></div>
+                    </div>
+                    <button onclick="registerPatient()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md mt-4">Complete Registration</button>
+                </div>
+            </div>
+        </main>
+
+        <main id="view-nurse" class="hidden p-8 max-w-3xl mx-auto w-full">
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-emerald-500">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">Nurse Station: Triage Entry</h2>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-bold text-slate-600 mb-1">Patient IC</label><input type="text" id="nurseIC" placeholder="Scan or enter IC..." class="w-full border p-3 rounded-md text-lg font-bold"></div>
+                    <div><label class="block text-sm font-bold text-slate-600 mb-1">Reported Symptoms</label><textarea id="nurseSymptoms" class="w-full border p-3 rounded-md h-24"></textarea></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">Blood Pressure (mmHg)</label><input type="text" id="nurseBP" placeholder="e.g., 120/80" class="w-full border p-3 rounded-md"></div>
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">Temperature (°C)</label><input type="number" step="0.1" id="nurseTemp" placeholder="e.g., 37.5" class="w-full border p-3 rounded-md"></div>
+                    </div>
+                    <button onclick="submitNurseTriage()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-md mt-4 hover:bg-emerald-700 shadow-md">Send to Doctor's Queue</button>
+                </div>
+            </div>
+        </main>
+
+       <main id="view-doctor" class="hidden p-8 max-w-6xl mx-auto w-full flex gap-6 h-full">
+            <div class="w-1/3 flex flex-col h-full">
+                <h2 class="text-xl font-bold text-slate-800 mb-4 flex justify-between">Waiting Room <button onclick="loadDoctorQueue()" class="text-sm text-blue-500 hover:underline">↻ Refresh</button></h2>
+                <div id="doctorQueueList" class="flex-1 overflow-y-auto space-y-3 pr-2">
+                    </div>
+            </div>
+            
+            <div class="w-2/3">
+                <div id="doctorConsultArea" class="hidden bg-white p-6 rounded-xl shadow-md border-t-4 border-t-blue-500 h-full flex flex-col overflow-y-auto">
+                    
+                    <div class="flex justify-between items-end border-b pb-3 mb-4">
+                        <h2 class="text-2xl font-bold text-slate-800" id="docPatName">Select a Patient</h2>
+                        <span class="text-sm text-slate-500 font-medium" id="docPatIC"></span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm text-slate-700">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Current Triage</p>
+                            <p><strong>Symptoms:</strong> <span id="docSymptoms"></span></p>
+                            <p class="mt-1"><strong>BP:</strong> <span id="docBP"></span> | <strong>Temp:</strong> <span id="docTemp"></span> °C</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded border border-blue-100 text-sm text-slate-700">
+                            <p class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">Patient Profile</p>
+                            <p><strong>Age:</strong> <span id="docAge">...</span> | <strong>Height:</strong> <span id="docHeight">...</span> cm | <strong>Weight:</strong> <span id="docWeight">...</span> kg</p>
+                            <p class="mt-1"><strong>Allergies:</strong> <span id="docAllergies" class="font-semibold text-orange-600">Loading...</span></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 border border-slate-200 rounded bg-white shadow-sm">
+                        <details class="group">
+                            <summary class="cursor-pointer bg-slate-50 p-3 font-bold text-slate-700 hover:bg-slate-100 list-none flex justify-between rounded">
+                                <span>📂 View Past Medical History</span>
+                                <span class="text-sm font-normal text-slate-500"><span id="docHistoryCount">0</span> previous records</span>
+                            </summary>
+                            <div class="p-4 max-h-48 overflow-y-auto bg-white space-y-3 border-t" id="docHistoryList">
+                                </div>
+                        </details>
+                    </div>
+
+                    <div class="flex-1 space-y-4">
+                        <input type="hidden" id="docVisitId">
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">Diagnosis</label><input type="text" id="docDiag" class="w-full border p-3 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"></div>
+                        <div><label class="block text-sm font-bold text-slate-600 mb-1">Clinical Notes</label><textarea id="docNotes" class="w-full border p-3 rounded-md h-24 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea></div>
+                        <div><label class="block text-sm font-bold text-purple-600 mb-1">Prescription (For Pharmacy)</label><textarea id="docRx" class="w-full border p-3 rounded-md h-20 border-purple-200 bg-purple-50 focus:ring-2 focus:ring-purple-500 focus:outline-none"></textarea></div>
+                    </div>
+                    <button onclick="submitDoctorConsult()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md mt-6 hover:bg-blue-700 shadow transition-all">Complete Consult & Send to Pharmacy</button>
+                </div>
+                
+                <div id="doctorEmptyState" class="bg-white p-10 rounded-xl shadow-sm border h-full flex items-center justify-center text-slate-400 font-medium">
+                    Select a patient from the queue to begin consultation.
+                </div>
+            </div>
+        </main>
+
+        <main id="view-pharmacy" class="hidden p-8 max-w-4xl mx-auto w-full">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex justify-between items-center border-b pb-4">
+                Pharmacy Queue 
+                <button onclick="loadPharmacyQueue()" class="text-sm bg-white border px-3 py-1 rounded shadow-sm text-slate-600 hover:bg-slate-50">↻ Refresh List</button>
+            </h2>
+            <div id="pharmacyQueueList" class="grid grid-cols-2 gap-6">
+                </div>
+        </main>
+
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5254/api/Patient";
+        let currentIC = "";
+
+        // --- NAVIGATION ---
+        function switchTab(tab) {
+            document.querySelectorAll('main').forEach(m => m.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            
+            // Reset sidebar styling
+            const btns = ['search', 'register', 'nurse', 'doctor', 'pharmacy'];
+            btns.forEach(b => {
+                document.getElementById(`nav-${b}`).className = `w-full text-left px-4 py-3 rounded-md hover:bg-slate-800 font-semibold transition-all ${b==='search'||b==='register' ? 'text-slate-300' : b==='nurse' ? 'text-emerald-400' : b==='doctor' ? 'text-blue-300' : 'text-purple-400'}`;
+            });
+
+            // Set active style
+            const activeBtn = document.getElementById(`nav-${tab}`);
+            activeBtn.classList.remove('hover:bg-slate-800', 'text-slate-300', 'text-emerald-400', 'text-blue-300', 'text-purple-400');
+            
+            if(tab === 'search' || tab === 'register') activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
+            if(tab === 'nurse') activeBtn.classList.add('bg-emerald-600', 'text-white', 'shadow');
+            if(tab === 'doctor') activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
+            if(tab === 'pharmacy') activeBtn.classList.add('bg-purple-600', 'text-white', 'shadow');
+
+            // Titles
+            const titles = { 'search':'Patient Database', 'register':'Patient Registration', 'nurse':'Nurse Station', 'doctor':'Doctor Consultation', 'pharmacy':'Pharmacy Dispatch' };
+            const roles = { 'search':'Administrator', 'register':'Administrator', 'nurse':'Triage Nurse', 'doctor':'Attending Physician', 'pharmacy':'Pharmacist' };
+            document.getElementById('headerTitle').innerText = titles[tab];
+            document.getElementById('activeRole').innerText = `Role: ${roles[tab]}`;
+
+            // Trigger specific loads
+            if(tab === 'doctor') loadDoctorQueue();
+            if(tab === 'pharmacy') loadPharmacyQueue();
+        }
+
+        // --- SEARCH & DASHBOARD ---
+        async function searchPatient() {
+            const ic = document.getElementById('icInput').value;
+            try {
+                const res = await fetch(`${API_URL}/${ic}`);
+                if (!res.ok) { alert("Patient not found!"); document.getElementById('patientResult').classList.add('hidden'); return; }
+
+                const data = await res.json();
+                currentIC = data.ic; 
+
+                document.getElementById('uiFullName').innerText = data.fullName;
+                document.getElementById('uiIC').innerText = data.ic;
+                document.getElementById('uiAge').innerText = data.currentAge;
+                document.getElementById('uiHeight').innerText = data.height_cm;
+                document.getElementById('uiWeight').innerText = data.weight_kg;
+
+                const algList = document.getElementById('uiAllergies');
+                algList.innerHTML = data.allergies.length === 0 ? '<li class="text-slate-400 italic">No known allergies.</li>' : '';
+                data.allergies.forEach(a => {
+                    algList.innerHTML += `<li class="bg-orange-50 p-3 rounded-md border border-orange-100"><span class="font-bold text-orange-600">[${a.severity}]</span> ${a.allergenName} <br><span class="text-sm text-slate-600">${a.notes}</span></li>`;
+                });
+
+                const histList = document.getElementById('uiHistory');
+                histList.innerHTML = '';
+                data.medicalHistory.forEach(r => {
+                    let statusBadge = r.queueStatus === 'Completed' ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">Completed</span>' : `<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">${r.queueStatus}</span>`;
+                    
+                    histList.innerHTML += `
+                        <li class="p-5 rounded-lg border border-slate-200 bg-slate-50 flex flex-col gap-3">
+                            <div class="flex justify-between border-b pb-2">
+                                <span class="font-bold text-slate-700">${new Date(r.visitDate).toLocaleString()}</span>
+                                ${statusBadge}
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="bg-white p-3 border rounded">
+                                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Nurse Triage</p>
+                                    <p><strong>Symptoms:</strong> ${r.symptoms || 'N/A'}</p>
+                                    <p><strong>BP:</strong> ${r.bloodPressure || 'N/A'} | <strong>Temp:</strong> ${r.temperature ? r.temperature + '°C' : 'N/A'}</p>
+                                </div>
+                                <div class="bg-white p-3 border rounded">
+                                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Physician Notes</p>
+                                    <p><strong>Diagnosis:</strong> ${r.diagnosis || 'Pending'}</p>
+                                    <p><strong>Notes:</strong> ${r.doctorNotes || 'Pending'}</p>
+                                </div>
+                            </div>
+                            ${r.prescription ? `<div class="bg-purple-50 p-3 border border-purple-100 rounded text-sm"><p class="text-xs font-bold text-purple-400 uppercase mb-1">Prescription</p><p class="text-purple-900">${r.prescription}</p></div>` : ''}
+                        </li>`;
+                });
+                document.getElementById('patientResult').classList.remove('hidden');
+            } catch (e) { alert("Database connection error."); }
+        }
+
+        async function addAllergy() {
+            const allergen = prompt("Enter Allergen Name (e.g., Penicillin, Peanuts):"); if(!allergen) return;
+            const severity = prompt("Enter Severity (Mild, Moderate, Severe, Anaphylactic):"); if(!severity) return;
+            const notes = prompt("Enter any notes (optional):") || "";
+            
+            await fetch(`${API_URL}/AddAllergy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ IC: currentIC, AllergenName: allergen, Severity: severity, Notes: notes }) });
+            searchPatient();
+        }
+
+        async function registerPatient() {
+            const payload = { FullName: document.getElementById('regName').value, IC: document.getElementById('regIC').value, DOB: document.getElementById('regDOB').value, Height_cm: parseFloat(document.getElementById('regHeight').value), Weight_kg: parseFloat(document.getElementById('regWeight').value) };
+            await fetch(`${API_URL}/AddPatient`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            alert("Patient Registered."); document.getElementById('icInput').value = payload.IC; switchTab('search'); searchPatient();
+        }
+
+       async function submitNurseTriage() {
+            const payload = { IC: document.getElementById('nurseIC').value, Symptoms: document.getElementById('nurseSymptoms').value, BloodPressure: document.getElementById('nurseBP').value, Temperature: parseFloat(document.getElementById('nurseTemp').value) };
+            if(!payload.IC || !payload.Symptoms) { alert("IC and Symptoms are required."); return; }
+            
+            const response = await fetch(`${API_URL}/Nurse/AddVisit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            
+            if (!response.ok) {
+                const errorMsg = await response.text();
+                alert(errorMsg); // This will show the "Please register first" message!
+                return;
+            }
+
+            alert("Patient sent to Doctor's Queue!"); 
+            ['nurseIC','nurseSymptoms','nurseBP','nurseTemp'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        // --- PIPELINE: DOCTOR ---
+        async function loadDoctorQueue() {
+            const res = await fetch(`${API_URL}/Doctor/Queue`);
+            const queue = await res.json();
+            const list = document.getElementById('doctorQueueList');
+            list.innerHTML = queue.length === 0 ? '<p class="text-slate-400 text-sm p-4">Queue is empty.</p>' : '';
+            
+            queue.forEach(q => {
+                // Notice we are now passing q.ic into the function!
+                list.innerHTML += `
+                    <div onclick="openDoctorConsult(${q.visitID}, '${q.fullName.replace(/'/g, "\\'")}', '${q.ic}', '${q.symptoms.replace(/'/g, "\\'")}', '${q.bloodPressure}', ${q.temperature})" 
+                         class="bg-white p-4 rounded-lg shadow-sm border border-l-4 border-l-blue-500 cursor-pointer hover:bg-blue-50 transition-colors">
+                        <p class="font-bold text-slate-800">${q.fullName}</p>
+                        <p class="text-xs text-slate-500 mt-1 truncate">Symptoms: ${q.symptoms}</p>
+                        <p class="text-xs text-slate-400 mt-1 font-mono">${new Date(q.visitDate).toLocaleTimeString()}</p>
+                    </div>`;
+            });
+        }
+
+        async function openDoctorConsult(visitId, name, ic, symptoms, bp, temp) {
+            document.getElementById('doctorEmptyState').classList.add('hidden');
+            document.getElementById('doctorConsultArea').classList.remove('hidden');
+            
+            // 1. Populate basic nurse triage data
+            document.getElementById('docVisitId').value = visitId;
+            document.getElementById('docPatName').innerText = name;
+            document.getElementById('docPatIC').innerText = `IC: ${ic}`;
+            document.getElementById('docSymptoms').innerText = symptoms;
+            document.getElementById('docBP').innerText = bp;
+            document.getElementById('docTemp').innerText = temp;
+            document.getElementById('docDiag').value = '';
+            document.getElementById('docNotes').value = '';
+            document.getElementById('docRx').value = '';
+
+            // 2. Clear old profile data while we fetch the new stuff
+            document.getElementById('docAge').innerText = '...';
+            document.getElementById('docHeight').innerText = '...';
+            document.getElementById('docWeight').innerText = '...';
+            document.getElementById('docAllergies').innerText = 'Loading...';
+            document.getElementById('docHistoryList').innerHTML = '<p class="text-xs text-slate-500">Loading history...</p>';
+
+            // 3. Magically fetch the rest of the patient's data in the background!
+            try {
+                const res = await fetch(`${API_URL}/${ic}`);
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Fill in the Profile box
+                    document.getElementById('docAge').innerText = data.currentAge;
+                    document.getElementById('docHeight').innerText = data.height_cm;
+                    document.getElementById('docWeight').innerText = data.weight_kg;
+
+                    if (data.allergies.length === 0) {
+                        document.getElementById('docAllergies').innerHTML = '<span class="text-slate-500 font-normal italic">None reported</span>';
+                    } else {
+                        document.getElementById('docAllergies').innerText = data.allergies.map(a => `${a.allergenName} [${a.severity}]`).join(', ');
+                    }
+
+                    // Fill in the History box (Excluding the current active visit!)
+                    const pastHistory = data.medicalHistory.filter(h => h.visitID !== visitId && h.queueStatus === 'Completed');
+                    document.getElementById('docHistoryCount').innerText = pastHistory.length;
+                    
+                    const histList = document.getElementById('docHistoryList');
+                    histList.innerHTML = pastHistory.length === 0 ? '<p class="text-xs text-slate-500 italic">No past history found.</p>' : '';
+                    
+                    pastHistory.forEach(h => {
+                        histList.innerHTML += `
+                            <div class="p-3 border border-slate-200 rounded bg-slate-50 text-sm">
+                                <p class="font-bold text-slate-700 border-b pb-1 mb-2">${new Date(h.visitDate).toLocaleDateString()}</p>
+                                <p class="text-slate-600 mb-1"><strong>Dx:</strong> ${h.diagnosis || 'N/A'}</p>
+                                <p class="text-slate-600"><strong>Notes:</strong> ${h.doctorNotes || 'N/A'}</p>
+                                ${h.prescription ? `<p class="text-purple-600 mt-1 whitespace-pre-wrap"><strong>Rx:</strong> ${h.prescription}</p>` : ''}
+                            </div>`;
+                    });
+                }
+            } catch(e) {
+                console.error("Failed to load patient history", e);
+                document.getElementById('docAllergies').innerText = 'Error loading data';
+            }
+        }
+
+        async function submitDoctorConsult() {
+            const payload = { 
+                VisitID: parseInt(document.getElementById('docVisitId').value), 
+                Diagnosis: document.getElementById('docDiag').value, 
+                DoctorNotes: document.getElementById('docNotes').value, 
+                Prescription: document.getElementById('docRx').value 
+            };
+            
+            if(!payload.Diagnosis) { 
+                alert("Diagnosis is required."); 
+                return; 
+            }
+            
+            try {
+                await fetch(`${API_URL}/Doctor/CompleteConsult`, { 
+                    method: "PUT", 
+                    headers: { "Content-Type": "application/json" }, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                // Hide the workspace and show the empty state again
+                document.getElementById('doctorConsultArea').classList.add('hidden');
+                document.getElementById('doctorEmptyState').classList.remove('hidden');
+                
+                // Refresh the queue so the patient disappears
+                loadDoctorQueue();
+            } catch (error) {
+                console.error("Error submitting consult:", error);
+                alert("Failed to submit to database.");
+            }
+        }
+
+        // --- PIPELINE: PHARMACY ---
+        async function loadPharmacyQueue() {
+            const res = await fetch(`${API_URL}/Pharmacy/Queue`);
+            const queue = await res.json();
+            const list = document.getElementById('pharmacyQueueList');
+            list.innerHTML = queue.length === 0 ? '<p class="text-slate-400 col-span-2 text-center p-10">No prescriptions pending.</p>' : '';
+            
+            queue.forEach(q => {
+                list.innerHTML += `
+                    <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-t-purple-500 flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">${q.fullName}</h3>
+                            <p class="text-xs text-slate-500 mb-4">IC: ${q.ic}</p>
+                            <div class="bg-purple-50 p-4 border border-purple-100 rounded-lg mb-4">
+                                <p class="text-xs font-bold text-purple-400 uppercase mb-1">To Dispense:</p>
+                                <p class="text-purple-900 font-medium">${q.prescription || 'No medication prescribed.'}</p>
+                            </div>
+                        </div>
+                        <button onclick="dispenseMeds(${q.visitID})" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded shadow transition-all">Dispense & Complete Visit</button>
+                    </div>`;
+            });
+        }
+
+        async function dispenseMeds(visitId) {
+            await fetch(`${API_URL}/Pharmacy/Dispense/${visitId}`, { method: "PUT" });
+            loadPharmacyQueue();
+        }
+    </script>
+</body>
+</html>
